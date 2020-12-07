@@ -1,4 +1,4 @@
-#cmake -DJulia_EXECUTABLE=/home/fieker/Downloads/julia-1.5.3/bin/julia -DSingular_PREFIX=/home/fieker/.julia/dev/Singular/deps/usr/ -DCMAKE_INSTALL_PREFIX=/tmp -DJlCxx_DIR=/home/fieker/.julia/artifacts/860a8b2216bd059600ed7c44cdaa3bb81b23ff1c/lib/cmake/JlCxx -DCMAKE_BUILD_TYPE=Release -S libsingular-julia -B /tmp/build
+#cmake -DJulia_EXECUTABLE=/home/bla/Downloads/julia-1.5.3/bin/julia -DSingular_PREFIX=/home/bla/.julia/dev/Singular/deps/usr/ -DCMAKE_INSTALL_PREFIX=/tmp -DJlCxx_DIR=/home/bla/.julia/artifacts/860a8b2216bd059600ed7c44cdaa3bb81b23ff1c/lib/cmake/JlCxx -DCMAKE_BUILD_TYPE=Release -S libsingular-julia -B /tmp/build
 
 import Singular, CxxWrap
 
