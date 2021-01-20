@@ -160,7 +160,7 @@ void * jl_array_to_intmat(jl_value_t * array_val)
     return reinterpret_cast<void *>(result);
 }
 
-lists jl_sideal_array_to_list_helper(jl_value_t * args_val, jl_value_t * types_val)
+lists jl_array_to_list_helper(jl_value_t * args_val, jl_value_t * types_val)
 {
     jl_array_t * args = reinterpret_cast<jl_array_t *>(args_val);
     jl_array_t * types = reinterpret_cast<jl_array_t *>(types_val);
@@ -389,14 +389,14 @@ void singular_define_caller(jlcxx::Module & Singular)
     Singular.method("jl_array_to_intvec", &jl_array_to_intvec);
     Singular.method("jl_array_to_intmat", &jl_array_to_intmat);
     Singular.method("copy_string_to_void", &copy_string_to_void);
-    Singular.method("jl_sideal_array_to_void", [] (jl_value_t * args_val,
+    Singular.method("jl_array_to_void", [] (jl_value_t * args_val,
                                                    jl_value_t * types_val,
                                                    ring R) {
         auto origin = currRing;
         rChangeCurrRing(R);
-        lists l = jl_sideal_array_to_list_helper(args_val, types_val);
+        lists l = jl_array_to_list_helper(args_val, types_val);
         rChangeCurrRing(origin);
-        return (void *) L;
+        return (void *) l;
     });
 
     Singular.method("create_syStrategy_data", &create_syStrategy_data);
