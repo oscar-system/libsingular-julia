@@ -39,6 +39,93 @@ void singular_define_coeffs(jlcxx::Module & Singular)
     /* get the characteristic of a coefficient domain */
     Singular.method("n_GetChar", [](coeffs n) { return n_GetChar(n); });
 
+    /* return a new coefficient ring (or a copy of the old one) */
+    Singular.method("transExt_SetMinpoly", [](coeffs cf, number a) {
+
+        if (!nCoeff_is_transExt(cf) || rVar(cf->extRing) != 1)
+        {
+            WerrorS("cannot set minpoly for these coeffients");
+            return nCopyCoeff(cf);
+        }
+
+        BOOLEAN redefine_from_algext = FALSE;
+
+        number p = n_Copy(a, cf);
+        n_Normalize(p, cf);
+
+        if (n_IsZero(p, cf))
+        {
+            n_Delete(&p, cf);
+            return nCopyCoeff(cf);
+        }
+
+        AlgExtInfo A;
+
+        A.r = rCopy(cf->extRing); // Copy  ground field!
+        // if minpoly was already set:
+        if (cf->extRing->qideal != NULL)
+            id_Delete(&A.r->qideal, A.r);
+        ideal q = idInit(1,1);
+        if (p == NULL || NUM((fraction)p) == NULL)
+        {
+            WerrorS("Could not construct the alg. extension: minpoly==0");
+            // cleanup A: TODO
+            rDelete( A.r );
+            return nCopyCoeff(cf);
+        }
+        if (!redefine_from_algext && (DEN((fraction)(p)) != NULL)) // minpoly must be a fraction with poly numerator...!!
+        {
+            poly n = DEN((fraction)(p));
+            if (!p_IsConstantPoly(n, cf->extRing))
+            {
+                WarnS("denominator must be constant - ignoring it");
+            }
+            p_Delete(&n, cf->extRing);
+            DEN((fraction)(p)) = NULL;
+        }
+
+        if (redefine_from_algext)
+            q->m[0] = (poly)p;
+        else
+            q->m[0] = NUM((fraction)p);
+        A.r->qideal = q;
+
+        // :(
+        //  NUM((fractionObject *)p) = NULL; // makes 0/ NULL fraction - which should not happen!
+        //  n_Delete(&p, r->cf); // doesn't expect 0/ NULL :(
+        if (!redefine_from_algext)
+        {
+            EXTERN_VAR omBin fractionObjectBin;
+            NUM((fractionObject *)p) = NULL; // not necessary, but still...
+            omFreeBin((ADDRESS)p, fractionObjectBin);
+        }
+
+        coeffs new_cf = nInitChar(n_algExt, &A);
+        if (new_cf == NULL)
+        {
+            WerrorS("Could not construct the alg. extension: llegal minpoly?");
+            // cleanup A: TODO
+            rDelete(A.r);
+            return nCopyCoeff(cf);
+        }
+        else
+        {
+            return new_cf;
+        }
+    });
+
+    Singular.method("transExt_GetMinpoly", [](coeffs cf) {
+        if (nCoeff_is_algExt(cf) && !nCoeff_is_GF(cf))
+        {
+            const ring A = cf->extRing;
+            return reinterpret_cast<number>(p_Copy(A->qideal->m[0], A));
+        }
+        else
+        {
+            return n_Init(0, cf);
+        }
+    });
+
     /* only used to get the order of a N_GField */
     Singular.method("nfCharQ", [](coeffs n) {return n->m_nfCharQ;});
 
