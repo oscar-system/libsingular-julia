@@ -39,31 +39,39 @@ void singular_define_coeffs(jlcxx::Module & Singular)
     /* get the characteristic of a coefficient domain */
     Singular.method("n_GetChar", [](coeffs n) { return n_GetChar(n); });
 
-    /* return a new coefficient ring (or a copy of the old one) */
-    Singular.method("transExt_SetMinpoly", [](coeffs cf, number a) {
+    /*
+        given F = R(x), a univariate function field over R = QQ or Fp,
+            construct the number field R[x]/minpoly.
+        Return a new coefficient ring or a copy of the old one in case of error.
+        Thus, the return should be checked to see if it is a number field
+            (nCoeff_is_algExt) before use.
 
-        if (!nCoeff_is_transExt(cf) || rVar(cf->extRing) != 1)
+        TODO: this will be in the kernel soon
+    */
+    Singular.method("transExt_SetMinpoly", [](coeffs F, number a) {
+
+        if (!nCoeff_is_transExt(F) || rVar(F->extRing) != 1)
         {
             WerrorS("cannot set minpoly for these coeffients");
-            return nCopyCoeff(cf);
+            return nCopyCoeff(F);
         }
 
         BOOLEAN redefine_from_algext = FALSE;
 
-        number p = n_Copy(a, cf);
-        n_Normalize(p, cf);
+        number p = n_Copy(a, F);
+        n_Normalize(p, F);
 
-        if (n_IsZero(p, cf))
+        if (n_IsZero(p, F))
         {
-            n_Delete(&p, cf);
-            return nCopyCoeff(cf);
+            n_Delete(&p, F);
+            return nCopyCoeff(F);
         }
 
         AlgExtInfo A;
 
-        A.r = rCopy(cf->extRing); // Copy  ground field!
+        A.r = rCopy(F->extRing); // Copy  ground field!
         // if minpoly was already set:
-        if (cf->extRing->qideal != NULL)
+        if (F->extRing->qideal != NULL)
             id_Delete(&A.r->qideal, A.r);
         ideal q = idInit(1,1);
         if (p == NULL || NUM((fraction)p) == NULL)
@@ -71,16 +79,16 @@ void singular_define_coeffs(jlcxx::Module & Singular)
             WerrorS("Could not construct the alg. extension: minpoly==0");
             // cleanup A: TODO
             rDelete( A.r );
-            return nCopyCoeff(cf);
+            return nCopyCoeff(F);
         }
         if (!redefine_from_algext && (DEN((fraction)(p)) != NULL)) // minpoly must be a fraction with poly numerator...!!
         {
             poly n = DEN((fraction)(p));
-            if (!p_IsConstantPoly(n, cf->extRing))
+            if (!p_IsConstantPoly(n, F->extRing))
             {
                 WarnS("denominator must be constant - ignoring it");
             }
-            p_Delete(&n, cf->extRing);
+            p_Delete(&n, F->extRing);
             DEN((fraction)(p)) = NULL;
         }
 
@@ -92,7 +100,7 @@ void singular_define_coeffs(jlcxx::Module & Singular)
 
         // :(
         //  NUM((fractionObject *)p) = NULL; // makes 0/ NULL fraction - which should not happen!
-        //  n_Delete(&p, r->cf); // doesn't expect 0/ NULL :(
+        //  n_Delete(&p, r->F); // doesn't expect 0/ NULL :(
         if (!redefine_from_algext)
         {
             EXTERN_VAR omBin fractionObjectBin;
@@ -100,29 +108,57 @@ void singular_define_coeffs(jlcxx::Module & Singular)
             omFreeBin((ADDRESS)p, fractionObjectBin);
         }
 
-        coeffs new_cf = nInitChar(n_algExt, &A);
-        if (new_cf == NULL)
+        coeffs K = nInitChar(n_algExt, &A);
+        if (K == NULL)
         {
             WerrorS("Could not construct the alg. extension: llegal minpoly?");
             // cleanup A: TODO
             rDelete(A.r);
-            return nCopyCoeff(cf);
+            return nCopyCoeff(F);
         }
         else
         {
-            return new_cf;
+            return K;
         }
     });
 
-    Singular.method("transExt_GetMinpoly", [](coeffs cf) {
-        if (nCoeff_is_algExt(cf) && !nCoeff_is_GF(cf))
+    /*
+        if K = R[x]/minpoly(x) (with nCoeff_is_algExt(cf) = true),
+        return the corresponding transcendental extension R(x): this is the
+        parent of minpoly.
+    */
+    Singular.method("algExt_UnsetMinpoly", [](coeffs K) {
+        if (nCoeff_is_algExt(K) && !nCoeff_is_GF(K))
         {
-            const ring A = cf->extRing;
-            return reinterpret_cast<number>(p_Copy(A->qideal->m[0], A));
+            ring K0 = rCopy0(K->extRing, FALSE, TRUE);
+            rComplete(K0);
+            TransExtInfo e;
+            e.r = K0;
+            coeffs F = nInitChar(n_transExt, &e);
+            return F;
         }
         else
         {
-            return n_Init(0, cf);
+            WerrorS("cannot unset minpoly for these coeffients");
+            return nCopyCoeff(K);
+        }
+    });
+
+    /*
+        Given K = R[x]/minpoly(x) and the corresponding F = R(x) return
+        the minpoly as an element of F.
+    */
+    Singular.method("algExt_GetMinpoly", [](coeffs K, coeffs F) {
+        if (nCoeff_is_algExt(K) && !nCoeff_is_GF(K))
+        {
+            nMapFunc nMap = n_SetMap(K, F);
+            number minpoly = reinterpret_cast<number>(K->extRing->qideal->m[0]);
+            return nMap(minpoly, K, F);
+        }
+        else
+        {
+            WerrorS("cannot get minpoly for these coeffients");
+            return n_Init(0, F);
         }
     });
 
@@ -143,6 +179,10 @@ void singular_define_coeffs(jlcxx::Module & Singular)
 
     Singular.method("nCoeff_is_transExt", [](coeffs n) {
         return bool(nCoeff_is_transExt(n));
+    });
+
+    Singular.method("nCoeff_is_algExt", [](coeffs n) {
+        return bool(nCoeff_is_algExt(n));
     });
 
     /* make a copy of a coefficient domain (actually just increments a
