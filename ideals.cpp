@@ -203,6 +203,14 @@ void singular_define_ideals(jlcxx::Module & Singular)
         return id;
     });
 
+    Singular.method("id_MultSect", [](void * ids, int len, ring r) {
+        const ring origin = currRing;
+        rChangeCurrRing(r);
+        ideal id = idMultSect(reinterpret_cast<resolvente>(ids), len);
+        rChangeCurrRing(origin);
+        return id;
+    });
+
     Singular.method("id_Syzygies", &id_Syzygies_internal);
 
     Singular.method("id_sres", &id_sres_helper);
