@@ -263,12 +263,22 @@ void singular_define_coeffs(jlcxx::Module & Singular)
         return z;
     });
 
-    Singular.method("n_GetNumerator", [](snumber * a, coeffs c) {
+    Singular.method("n_GetNumerator", [](number & a, coeffs c) {
         return n_GetNumerator(a, c);
     });
 
-    Singular.method("n_GetDenom",
-                    [](snumber * a, coeffs c) { return n_GetDenom(a, c); });
+    Singular.method("n_GetDenom", [](number & a, coeffs c) {
+        return n_GetDenom(a, c);
+    });
+
+    /*
+        since references are such a pain on the julia side,
+        n_Normalize takes a non-reference and returns the modifed result
+    */
+    Singular.method("n_Normalize", [](number a, coeffs c) {
+        n_Normalize(a, c);
+        return a;
+    });
 
     Singular.method("n_Power", [](snumber * a, int b, coeffs c) {
         number res;
@@ -288,10 +298,9 @@ void singular_define_coeffs(jlcxx::Module & Singular)
         return n_Lcm(a, b, c);
     });
 
-    Singular.method("n_ExtGcd_internal", [](snumber * a, snumber * b,
-                                            void * s, void * t, coeffs c) {
-        return n_ExtGcd(a, b, reinterpret_cast<snumber **>(s),
-                        reinterpret_cast<snumber **>(t), c);
+    Singular.method("n_ExtGcd", [](number a, number b,
+                                   number * s, number * t, const coeffs c) {
+        return n_ExtGcd(a, b, s, t, c);
     });
 
     Singular.method("n_IsZero", [](snumber * x, const coeffs n) {
@@ -325,11 +334,11 @@ void singular_define_coeffs(jlcxx::Module & Singular)
         return x;
     });
 
-    Singular.method("n_QuotRem_internal", [](snumber * x, snumber * y,
-                                             void * p, const coeffs n) {
-        return n_QuotRem(x, y, reinterpret_cast<snumber **>(p), n);
+    Singular.method("n_QuotRem", [](number x, number y, number * r, const coeffs n) {
+        return n_QuotRem(x, y, r, n);
     });
 
+    /* TODO figure out what this is doing here */
     Singular.method("n_Rem", [](snumber * x, snumber * y, const coeffs n) {
         number qq;
         return n_QuotRem(x, y, &qq, n);
