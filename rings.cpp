@@ -284,6 +284,7 @@ void singular_define_rings(jlcxx::Module & Singular)
     Singular.method("p_Mult_q", p_Mult_q);
     Singular.method("pp_Mult_qq", pp_Mult_qq);
     Singular.method("p_Power", p_Power);
+    Singular.method("p_Compare", p_Compare);
     Singular.method("p_EqualPolys",
                     [](spolyrec * p, spolyrec * q, ip_sring * r) {
                         return p_EqualPolys(p, q, r);
