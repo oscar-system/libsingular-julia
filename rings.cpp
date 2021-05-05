@@ -35,7 +35,7 @@ auto rDefault_wvhdl_helper(coeffs cf,
     size_t j = 0;
     int nord = ord_data[j++];
 
-    // TODO which ones of these does rDefault take ownership of?
+    // rDefault is going to take ownership of all 4 of these pointers
     rRingOrder_t * ord = (rRingOrder_t *) omAlloc0((nord + 1) * sizeof(rRingOrder_t));
     int * blk0 = (int *) omAlloc0((nord + 1) * sizeof(int));
     int * blk1 = (int *) omAlloc0((nord + 1) * sizeof(int));
