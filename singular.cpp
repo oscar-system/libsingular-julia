@@ -15,7 +15,18 @@ extern int         inerror;
 
 static void WerrorS_for_julia(const char * s)
 {
+    errorreported = 0;
     singular_error += s;
+}
+
+static void WerrorS_and_reset(const char * s)
+{
+    errorreported = 0;
+    /* and, copied from WerrorS in Singular:*/
+    fwrite("   ? ",1,5,stderr);
+    fwrite((char *)s,1,strlen((char *)s),stderr);
+    fwrite("\n",1,1,stderr);
+    fflush(stderr);
 }
 
 static void PrintS_for_julia(const char * s)
@@ -67,6 +78,7 @@ JLCXX_MODULE define_julia_module(jlcxx::Module & Singular)
 
     Singular.method("siInit", [](const char * path) {
         siInit(const_cast<char *>(path));
+        WerrorS_callback=WerrorS_and_reset;
     });
     Singular.method("versionString", []() {
         return const_cast<const char *>(versionString());
