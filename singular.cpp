@@ -19,16 +19,6 @@ static void WerrorS_for_julia(const char * s)
     singular_error += s;
 }
 
-static void WerrorS_and_reset(const char * s)
-{
-    errorreported = 0;
-    /* and, copied from WerrorS in Singular:*/
-    fwrite("   ? ",1,5,stderr);
-    fwrite((char *)s,1,strlen((char *)s),stderr);
-    fwrite("\n",1,1,stderr);
-    fflush(stderr);
-}
-
 static void PrintS_for_julia(const char * s)
 {
     singular_return += s;
@@ -78,13 +68,22 @@ JLCXX_MODULE define_julia_module(jlcxx::Module & Singular)
 
     Singular.method("siInit", [](const char * path) {
         siInit(const_cast<char *>(path));
-        WerrorS_callback=WerrorS_and_reset;
+        WerrorS_callback=WerrorS_for_julia;
     });
     Singular.method("versionString", []() {
         return const_cast<const char *>(versionString());
     });
     Singular.method("version", []() {
         return SINGULAR_VERSION;
+    });
+    Singular.method("have_error", []() {
+        return !singular_error.empty();
+    });
+
+    Singular.method("get_and_clear_error", []() {
+        std::string s(std::move(singular_error));
+        singular_error.clear();
+        return s;
     });
 
 #define SETTER(A, B)                                    \
