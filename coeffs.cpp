@@ -341,12 +341,6 @@ void singular_define_coeffs(jlcxx::Module & Singular)
         return n_QuotRem(x, y, r, n);
     });
 
-    /* TODO figure out what this is doing here and/or remote it */
-    Singular.method("n_Rem", [](snumber * x, snumber * y, const coeffs n) {
-        number qq;
-        return n_QuotRem(x, y, &qq, n);
-    });
-
     Singular.method("n_IntMod", &n_IntMod);
 
     Singular.method("n_Farey", &n_Farey);
